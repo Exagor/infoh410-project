@@ -3,8 +3,8 @@ import gymnasium as gym
 DISCOUNT = 0.95
 LR = 0.1
 
-env = gym.make('CartPole-v1', render_mode="human")
-# env = gym.make("ALE/SpaceInvaders-v5", render_mode="human")
+# env = gym.make('CartPole-v1', render_mode="human")
+env = gym.make("ALE/SpaceInvaders-v5", render_mode="human")
 # env = gym.make("LunarLander-v2", render_mode="human")
 
 
