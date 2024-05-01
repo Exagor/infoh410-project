@@ -12,12 +12,12 @@ class agent:
     - gamma (discount factor)
     - alpha (learning rate)
     """
-    def __init__(self, epsilon, env, gamma=0.95, alpha=0.1):
+    def __init__(self, epsilon, env, gamma=0.95, alpha=0.1, Q_table=dict()):
         self.epsilon = epsilon #epsilon greedy
         self.gamma = gamma #discount factor
         self.alpha = alpha #learning rate
         self.env = env
-        self.Q_table = dict()
+        self.Q_table = Q_table
 
     def convert_state(self, state):
         """
@@ -32,7 +32,7 @@ class agent:
         str_state = ""
         for i in state:
             for j in i:
-                str_state += str(i)+" "
+                str_state += str(j)+" "
         return str_state
     
     def get_action(self, state):
@@ -50,6 +50,9 @@ class agent:
             return self.env.action_space.sample()
         else:
             str_state = self.convert_state(state)
+            if str_state not in self.Q_table:
+                self.Q_table[str_state] = dict()
+                return self.env.action_space.sample()
             return max(self.Q_table[str_state])
         
     def update_Q_table(self, state, action, reward, next_state):
@@ -97,8 +100,6 @@ class agent:
         while not done:
             action = self.get_action(self.state)
             next_state, reward, done, _, _ = self.env.step(action)
-            print(self.state)
-            print(next_state)
             if train:
                 self.update_Q_table(self.state, action, reward, next_state)
             self.state = next_state
