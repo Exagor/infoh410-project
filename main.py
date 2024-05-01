@@ -1,58 +1,69 @@
 import gymnasium as gym
 from agent import agent
 from time import time
-import csv
+import file_utils as fu
+from threading import Thread, current_thread
 
 DISCOUNT = 0.95 #gamma discount factor
 LR = 0.1 #learning rate
 EPSILON = 0.1 #epsilon greedy
 
 q_table_file = "q_table.csv"
+table=fu.load_csv(q_table_file)
+has_display = False
 
-q_table = dict()
+def train():
 
-try:
-    # transform csv into dictionary of dictionaries
-    with open(q_table_file, mode='w') as file:
-        reader = csv.reader(file)
-        q_table = {rows[0]: {rows[1]: rows[2]} for rows in reader}
-except:
-    pass
+    print("Making env - ", current_thread().name)
 
-for key,value in q_table.items():
-    print(len(key),value)
+    args = {
+        "obs_type": "grayscale",
+        "frameskip": 4
+    }
 
-# env = gym.make('CartPole-v1', render_mode="human")
-env = gym.make(
-    "ALE/SpaceInvaders-v5",
-    render_mode="human",
-    obs_type="grayscale",
-    frameskip=4
-)
-# env = gym.make("LunarLander-v2", render_mode="human")
+    global has_display
 
-env.metadata['render_fps'] = 30
+    if not has_display:
+        args["render_mode"] ="human"
+        has_display = True
 
-bot = agent(EPSILON, env, DISCOUNT, LR, Q_table=q_table)
 
-state = env.reset()
-key = bot.convert_state(state)
+    env = gym.make(
+        "ALE/SpaceInvaders-v5",
+        **args
+    )
 
-start = time()
-bot.train(1)
-end = time()
-print(len(bot.Q_table))
-print("Time taken: ", end-start)
+    env.metadata['render_fps'] = 120
 
-for key,value in bot.Q_table.items():
-    print(len(key),value)
+    print("Init agent - ", current_thread().name)
 
-# bot.Q_table = {'a':{0:5,1:6,2:7},'b':{2:10,0:8}}
+    bot = agent(EPSILON, env, DISCOUNT, LR)
 
-# transform dictionary of dictionaries into csv
-with open(q_table_file, mode='w') as file:
-    writer = csv.writer(file)
-    for key, value in bot.Q_table.items():
-        for key2, value2 in value.items():
-            writer.writerow([key, key2, value2])
+    print("Reseting env - ", current_thread().name)
+    state = env.reset()
+    print("Starting training - ", current_thread().name)
+    start = time()
+    bot.train(1)
+    end = time()
+    print("Time taken: ", end-start)
 
+def multi_train(threads=5):
+
+    pool = []
+
+    for _ in range(threads):
+        t = Thread(target=train)
+        pool.append(t)
+        t.start()
+        print("Thread started")
+    
+    for t in pool:
+        t.join()
+    
+    print("All threads finished")
+
+if __name__ == "__main__":
+
+    agent.with_Q_table(fu.load_csv(q_table_file))
+    multi_train()
+    fu.save_csv(table=agent.Q_table, filename=q_table_file)

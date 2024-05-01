@@ -1,6 +1,13 @@
 import random as rng
+from threading import Lock, Thread, current_thread
 
 class agent:
+    Q_table=dict()
+
+    @staticmethod
+    def with_Q_table(table):
+        agent.Q_table = table
+
     """
     Represents an agent that interacts with the game
 
@@ -12,12 +19,12 @@ class agent:
     - gamma (discount factor)
     - alpha (learning rate)
     """
-    def __init__(self, epsilon, env, gamma=0.95, alpha=0.1, Q_table=dict()):
+    def __init__(self, epsilon, env, gamma=0.95, alpha=0.1):
         self.epsilon = epsilon #epsilon greedy
         self.gamma = gamma #discount factor
         self.alpha = alpha #learning rate
         self.env = env
-        self.Q_table = Q_table
+        self.lock = Lock()
 
     def convert_state(self, state):
         """
@@ -49,11 +56,12 @@ class agent:
         if rng.random() < self.epsilon:
             return self.env.action_space.sample()
         else:
-            str_state = self.convert_state(state)
-            if str_state not in self.Q_table:
-                self.Q_table[str_state] = dict()
-                return self.env.action_space.sample()
-            return max(self.Q_table[str_state])
+            with self.lock:
+                str_state = self.convert_state(state)
+                if str_state not in agent.Q_table:
+                    agent.Q_table[str_state] = dict()
+                    return self.env.action_space.sample()
+                return max(agent.Q_table[str_state])
         
     def update_Q_table(self, state, action, reward, next_state):
         """
@@ -69,16 +77,17 @@ class agent:
         str_state = self.convert_state(state)
         str_next_state = self.convert_state(next_state)
         # Initialize the Q table if the state or next state is not in the Q table
-        if str_state not in self.Q_table:
-            self.Q_table[str_state] = dict()
-        if str_next_state not in self.Q_table:
-            self.Q_table[str_next_state] = dict()
-        if action not in self.Q_table[str_state]:
-            self.Q_table[str_state][action] = 0.0
-        if action not in self.Q_table[str_next_state]:
-            self.Q_table[str_next_state][action] = 0.0
+        with self.lock:
+            if str_state not in agent.Q_table:
+                agent.Q_table[str_state] = dict()
+            if str_next_state not in agent.Q_table:
+                agent.Q_table[str_next_state] = dict()
+            if action not in agent.Q_table[str_state]:
+                agent.Q_table[str_state][action] = 0.0
+            if action not in agent.Q_table[str_next_state]:
+                agent.Q_table[str_next_state][action] = 0.0
         
-        self.Q_table[str_state][action] += self.alpha * (reward + self.gamma * max(self.Q_table[str_next_state].values()) - self.Q_table[str_state][action])
+            agent.Q_table[str_state][action] += self.alpha * (reward + self.gamma * max(agent.Q_table[str_next_state].values()) - agent.Q_table[str_state][action])
 
     def train(self, episodes=1000):
         """
@@ -97,6 +106,7 @@ class agent:
         Play a game
         """
         done = False
+        print("Loop: ", current_thread().getName(), "is running")
         while not done:
             action = self.get_action(self.state)
             next_state, reward, done, _, _ = self.env.step(action)
