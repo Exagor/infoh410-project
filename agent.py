@@ -1,5 +1,10 @@
 import random as rng
 from threading import Lock, Thread, current_thread
+from time import time
+import file_utils as fu
+
+q_table_file = "q_table.csv"
+score_file = "score.csv"
 
 class agent:
     Q_table=dict()
@@ -25,6 +30,12 @@ class agent:
         self.alpha = alpha #learning rate
         self.env = env
         self.lock = Lock()
+        self.reset_game_params()
+    
+    def reset_game_params(self):
+        self.score = 0
+        self.lives = -1
+        self.state = self.env.reset()
 
     def convert_state(self, state):
         """
@@ -97,9 +108,25 @@ class agent:
         - env: the environment
         - episodes: the number of episodes
         """
+        starting_epsilon = self.epsilon
         for episode in range(episodes):
-            self.state = self.env.reset()
+            print("Episode: ", episode, "Epsilon: ", self.epsilon)
+
+            # Reset the score, lives, and environment
+            self.reset_game_params()
+
+            # Play a game
+            start = time()
             self.play_a_game(train=True)
+            end = time()
+
+            # Decrease epsilon
+            if self.epsilon > 0.1:
+                self.epsilon -= (starting_epsilon-0.1)/(max(episodes-1,1))
+
+            # Save the episode & the updated Q table
+            fu.save_score(score_file, self.score, end-start)
+            fu.save_csv(q_table_file, self.Q_table)
     
     def play_a_game(self, train=False):
         """
@@ -110,6 +137,16 @@ class agent:
         while not done:
             action = self.get_action(self.state)
             next_state, reward, done, _, _ = self.env.step(action)
+            self.score += reward
+            lives = self.env.unwrapped.ale.lives()
+
+            #Check if nber of lives has changed
+            if lives < self.lives:
+                # If lives have decreased, give a penalty
+                # -1 is to avoid penality for the first update (game start)
+                if self.lives > -1:
+                    reward = -50
+            self.lives = lives
             if train:
                 self.update_Q_table(self.state, action, reward, next_state)
             self.state = next_state

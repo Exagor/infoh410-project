@@ -6,9 +6,10 @@ from threading import Thread, current_thread
 
 DISCOUNT = 0.95 #gamma discount factor
 LR = 0.1 #learning rate
-EPSILON = 0.1 #epsilon greedy
+EPSILON = 0.4 #epsilon greedy
 
 q_table_file = "q_table.csv"
+score_file = "score.csv"
 table=fu.load_csv(q_table_file)
 has_display = False
 
@@ -40,12 +41,8 @@ def train():
     bot = agent(EPSILON, env, DISCOUNT, LR)
 
     print("Reseting env - ", current_thread().name)
-    state = env.reset()
     print("Starting training - ", current_thread().name)
-    start = time()
     bot.train(1)
-    end = time()
-    print("Time taken: ", end-start)
 
 def multi_train(threads=5):
 
@@ -65,5 +62,5 @@ def multi_train(threads=5):
 if __name__ == "__main__":
 
     agent.with_Q_table(fu.load_csv(q_table_file))
-    multi_train()
-    fu.save_csv(table=agent.Q_table, filename=q_table_file)
+    # while True:
+    train()
