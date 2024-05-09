@@ -8,7 +8,6 @@ def load_csv(filename):
     try:
         with gzip.open(filename, mode='rb') as file:
             data = pickle.load(file)
-        print(data)
         return data
 
     except FileNotFoundError:
@@ -23,7 +22,7 @@ def save_csv(filename, table):
 def save_score(filename, score, time_taken):
     """Save the score to a CSV file"""
     try:
-        with open(filename, mode='a') as file:
+        with open(filename, mode='a',newline='') as file:
             writer = csv.writer(file)
             writer.writerow([score, time_taken])
     except:

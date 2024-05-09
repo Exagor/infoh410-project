@@ -8,7 +8,7 @@ DISCOUNT = 0.95 #gamma discount factor
 LR = 0.1 #learning rate
 EPSILON = 0.4 #epsilon greedy
 
-q_table_file = "q_table.csv"
+q_table_file = "q_table.bin"
 score_file = "score.csv"
 table=fu.load_csv(q_table_file)
 has_display = False
@@ -42,7 +42,7 @@ def train():
 
     print("Reseting env - ", current_thread().name)
     print("Starting training - ", current_thread().name)
-    bot.train(1)
+    bot.train(100)
 
 def multi_train(threads=5):
 
@@ -62,5 +62,5 @@ def multi_train(threads=5):
 if __name__ == "__main__":
 
     agent.with_Q_table(table)
-    # while True:
-    train()
+    while True:
+        train()

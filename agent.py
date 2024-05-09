@@ -3,7 +3,7 @@ from threading import Lock, Thread, current_thread
 from time import time
 import file_utils as fu
 
-q_table_file = "q_table.csv"
+q_table_file = "q_table.bin"
 score_file = "score.csv"
 
 class agent:
