@@ -14,14 +14,13 @@ def load_csv(filename):
                 dict_row = dict()
 
                 for action,value in enumerate(rows[1:]):
-                    dict_row[action] = int(value)
+                    dict_row[action] = float(value)
 
                 data[img_state] = dict_row
-        print(data)
         return data
 
             # return {rows[0]: {rows[1]: rows[2]} for rows in reader}
-    except:
+    except FileNotFoundError:
         print("Error: Could not opend .csv file")
         return dict(dict())
 
@@ -41,9 +40,12 @@ def save_csv(filename, table):
 
 def save_score(filename, score, time_taken):
     """Save the score to a CSV file"""
-    with open(filename, mode='a') as file:
-        writer = csv.writer(file)
-        writer.writerow([score, time_taken])
+    try:
+        with open(filename, mode='a') as file:
+            writer = csv.writer(file)
+            writer.writerow([score, time_taken])
+    except:
+        print(f"Error: Could not open {filename} file")
 
 def convert_state(img_state):
     data = ""
@@ -54,7 +56,7 @@ def convert_state(img_state):
     data = zlib.compress(data.encode())
     return data
 
-if __name__ == "__main__":
-    test = {[[1,2,4],[1,2,4]]:{2:5,4:3}}
-    save_csv("q_table.csv", test)
-    print(load_csv("q_table.csv"))
+# if __name__ == "__main__":
+#     test = {[[1,2,4],[1,2,4]]:{2:5,4:3}}
+#     save_csv("q_table.csv", test)
+#     print(load_csv("q_table.csv"))
