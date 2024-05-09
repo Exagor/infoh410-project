@@ -1,43 +1,23 @@
 import csv
 import zlib
+import gzip
+import pickle
 
 def load_csv(filename):
     """Load a Q-table from a CSV file"""
     try:
-        # transform csv into dictionary of dictionaries
-        with open(filename, mode='r') as file:
-            reader = csv.reader(file)
-            # Format: {img_state: {action: value}}
-            data = dict()
-            for rows in reader:
-                img_state = rows[0]
-                dict_row = dict()
-
-                for action,value in enumerate(rows[1:]):
-                    dict_row[action] = int(value)
-
-                data[img_state] = dict_row
+        with gzip.open(filename, mode='rb') as file:
+            data = pickle.load(file)
         print(data)
         return data
-
-            # return {rows[0]: {rows[1]: rows[2]} for rows in reader}
     except:
-        print("Error: Could not opend .csv file")
+        print("Error: Could not open .gz file")
         return dict(dict())
 
 def save_csv(filename, table):
     """Save a Q-table to a CSV file"""
-    with open(filename, mode='w',newline='') as file:
-        writer = csv.writer(file)
-        for img_state, dict_row in table.items():
-            data = [img_state]
-            for key in range(6):
-                if key in dict_row: #Check if there is a key for this action
-                    data.append(dict_row[key])
-                else: # If not, initialize it to 0.0
-                    data.append(0.0)
-            # Data = state, action1, ..., action6
-            writer.writerow(data)
+    with gzip.open(filename, mode='wb') as file:
+        pickle.dump(table, file)
 
 def save_score(filename, score, time_taken):
     """Save the score to a CSV file"""
