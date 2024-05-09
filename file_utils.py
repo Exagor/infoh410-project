@@ -10,8 +10,9 @@ def load_csv(filename):
             data = pickle.load(file)
         print(data)
         return data
-    except:
-        print("Error: Could not open .gz file")
+
+    except FileNotFoundError:
+        print("Error: Could not opend .csv file")
         return dict(dict())
 
 def save_csv(filename, table):
@@ -21,9 +22,12 @@ def save_csv(filename, table):
 
 def save_score(filename, score, time_taken):
     """Save the score to a CSV file"""
-    with open(filename, mode='a') as file:
-        writer = csv.writer(file)
-        writer.writerow([score, time_taken])
+    try:
+        with open(filename, mode='a') as file:
+            writer = csv.writer(file)
+            writer.writerow([score, time_taken])
+    except:
+        print(f"Error: Could not open {filename} file")
 
 def convert_state(img_state):
     data = ""
@@ -34,7 +38,7 @@ def convert_state(img_state):
     data = zlib.compress(data.encode())
     return data
 
-if __name__ == "__main__":
-    test = {[[1,2,4],[1,2,4]]:{2:5,4:3}}
-    save_csv("q_table.csv", test)
-    print(load_csv("q_table.csv"))
+# if __name__ == "__main__":
+#     test = {[[1,2,4],[1,2,4]]:{2:5,4:3}}
+#     save_csv("q_table.csv", test)
+#     print(load_csv("q_table.csv"))
