@@ -61,6 +61,6 @@ def multi_train(threads=5):
 
 if __name__ == "__main__":
 
-    agent.with_Q_table(fu.load_csv(q_table_file))
+    agent.with_Q_table(table)
     # while True:
     train()

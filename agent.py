@@ -37,21 +37,6 @@ class agent:
         self.lives = -1
         self.state = self.env.reset()
 
-    def convert_state(self, state):
-        """
-        Convert the state to a string
-
-        Parameters:
-        - state: the state
-
-        Returns:
-        - the state as a string
-        """
-        str_state = ""
-        for i in state:
-            for j in i:
-                str_state += str(j)+" "
-        return str_state
     
     def get_action(self, state):
         """
@@ -68,7 +53,7 @@ class agent:
             return self.env.action_space.sample()
         else:
             with self.lock:
-                str_state = self.convert_state(state)
+                str_state = fu.convert_state(state)
                 if str_state not in agent.Q_table:
                     agent.Q_table[str_state] = dict()
                     return self.env.action_space.sample()
@@ -85,8 +70,8 @@ class agent:
         - next_state: the next state
         - env: the environment
         """
-        str_state = self.convert_state(state)
-        str_next_state = self.convert_state(next_state)
+        str_state = fu.convert_state(state)
+        str_next_state = fu.convert_state(next_state)
         # Initialize the Q table if the state or next state is not in the Q table
         with self.lock:
             if str_state not in agent.Q_table:
