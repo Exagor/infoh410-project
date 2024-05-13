@@ -138,3 +138,22 @@ class agent:
 
     def __del__(self):
         self.env.close()
+
+
+class agent_dl:
+    Q_table=dict()
+
+    @staticmethod
+    def with_Q_table(table):
+        agent.Q_table = table
+
+    def __init__(self, epsilon, env, gamma=0.95, alpha=0.1):
+        self.epsilon = epsilon #epsilon greedy
+        self.gamma = gamma #discount factor
+        self.alpha = alpha #learning rate
+        self.env = env
+        self.lock = Lock()
+        self.reset_game_params()
+    
+    def __del__(self):
+        self.env.close()

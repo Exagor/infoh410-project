@@ -6,7 +6,7 @@ from threading import Thread, current_thread
 
 DISCOUNT = 0.95 #gamma discount factor
 LR = 0.1 #learning rate
-EPSILON = 0.4 #epsilon greedy
+EPSILON = 0.2 #epsilon greedy
 
 q_table_file = "q_table.bin"
 score_file = "score.csv"
