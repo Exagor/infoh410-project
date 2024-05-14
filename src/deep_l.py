@@ -6,6 +6,10 @@ from rl.agents import DQNAgent
 from rl.memory import SequentialMemory
 from rl.policy import LinearAnnealedPolicy, EpsGreedyQPolicy
 import csv
+from stable_baselines3 import DQN
+from stable_baselines3.common.envs import Monitor
+from stable_baselines3.dqn.policies import CnnPolicy
+from stable_baselines3.common.callbacks import CheckpointCallback
 
 
 class deep_rl:
@@ -58,6 +62,30 @@ class deep_rl:
             writer = csv.writer(csvfile)
             writer.writerow(['Row Number', 'Score'])
             for i, score in enumerate(scores):
+                writer.writerow([i+1, score])
+
+    def __del__(self):
+        self.env.close()
+
+class DeepRL:
+    def __init__(self, env):
+        self.env = Monitor(env)
+        self.model = DQN(CnnPolicy, self.env, verbose=1, buffer_size=10000, learning_rate=1e-4, exploration_final_eps=0.1, exploration_initial_eps=1.0, target_update_interval=1000)
+
+    def train(self, iterations=1000):
+        checkpoint_callback = CheckpointCallback(save_freq=1000, save_path='./weights/', name_prefix='dqn_weights')
+        self.model.learn(total_timesteps=iterations, callback=checkpoint_callback)
+
+    def print_score(self):
+        mean_reward, std_reward = self.model.evaluate_policy(self.model.policy, self.env, n_eval_episodes=5)
+        print(f"Mean reward: {mean_reward} +/- {std_reward}")
+
+    def save_scores(self, filename):
+        mean_reward, std_reward = self.model.evaluate_policy(self.model.policy, self.env, n_eval_episodes=5)
+        with open(filename, 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['Row Number', 'Score'])
+            for i, score in enumerate([mean_reward, std_reward]):
                 writer.writerow([i+1, score])
 
     def __del__(self):

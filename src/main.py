@@ -3,6 +3,7 @@ from agent import agent
 from time import time
 import file_utils as fu
 from threading import Thread, current_thread
+from deep_l import *
 
 DISCOUNT = 0.95 #gamma discount factor
 LR = 0.1 #learning rate
@@ -59,8 +60,35 @@ def multi_train(threads=5):
     
     print("All threads finished")
 
+def test_deep_rl():
+    print("Making env - ", current_thread().name)
+
+    args = {
+        "obs_type": "grayscale",
+        "frameskip": 4
+    }
+
+    global has_display
+
+    if not has_display:
+        args["render_mode"] ="human"
+        has_display = True
+
+    env = gym.make(
+        "ALE/SpaceInvaders-v5",
+        **args
+    )
+    env.metadata['render_fps'] = 120
+
+    network = DeepRL(env)
+    network.train(10)
+    network.print_score()
+
 if __name__ == "__main__":
 
-    agent.with_Q_table(table)
-    while True:
-        train()
+    # agent.with_Q_table(table)
+    # while True:
+    #     train()
+
+    #test of deep reinforcement
+    test_deep_rl()
