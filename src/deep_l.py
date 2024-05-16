@@ -1,25 +1,25 @@
 import numpy as np
 import keras
 import tensorflow as tf
-from keras import layers
 from keras.models import Sequential
 from keras.layers import Dense, Flatten, Convolution2D
 from keras.optimizers import Adam
 import csv
-
-class DQN_agent:
-
-    def __init__(self, model):
-        self.model = model
-
+import os
 
 class deep_QN:
 
-    def __init__(self, env, gamma=0.95, epsilon=1.0, epsilon_min=0.1, epsilon_max=1.0, epsilon_interval=0.0001, batch_size=32, max_episodes=1000):
+    def __init__(self, env, gamma=0.95,
+                 epsilon=1.0, epsilon_min=0.1, epsilon_max=1.0, 
+                 epsilon_interval=0.0001, batch_size=32, max_episodes=1000,
+                 filename="model.keras",
+                 score_file="score.csv"):
         self.env = env
         self.height, self.width = self.env.observation_space.shape[0], self.env.observation_space.shape[1]
         self.channels = 1 #because grayscale
         self.actions = self.env.action_space.n
+        self.filename = filename
+        self.score_file = score_file
         self.model = self.build_model()
         self.model_target = self.build_model()
         self.max_steps_per_episode = 10000
@@ -30,8 +30,12 @@ class deep_QN:
         self.epsilon_interval = epsilon_interval
         self.batch_size = batch_size
         self.max_episodes = max_episodes
+        
 
     def build_model(self):
+        if os.path.exists(self.filename):
+            model = keras.models.load_model(self.filename)
+            return model
         model = Sequential() #initialize the model
         # Convolutional layers of the model
         model.add(Convolution2D(32, (8,8), strides=(4,4), activation='relu', input_shape=(self.height, self.width, self.channels)))
@@ -43,30 +47,16 @@ class deep_QN:
         model.add(Dense(512, activation='relu'))
         # Final layer with the actions
         model.add(Dense(6, activation='linear'))
-    #     model = keras.Sequential(
-    #     [
-    #         layers.Lambda(
-    #             lambda tensor: keras.ops.transpose(tensor, [0, 2, 3, 1]),
-    #             output_shape=(self.width, self.height, self.channels),
-    #             input_shape=(self.channels, self.height, self.width),
-    #         ),
-    #         # Convolutions on the frames on the screen
-    #         # 32 filters, kernel size of 8, stride of 4, and "relu" activation
-    #         layers.Conv2D(32, 8, strides=4, activation="relu", input_shape=(self.channels, self.height, self.width)),
-    #         layers.Conv2D(64, 4, strides=2, activation="relu"),
-    #         layers.Conv2D(64, 3, strides=1, activation="relu"),
-    #         layers.Flatten(),
-    #         layers.Dense(512, activation="relu"),
-    #         layers.Dense(self.actions, activation="linear"),
-    #     ]
-    # )
         return model
     
-    def build_agent(model):
-        print("lol")
-    
+    def save_scores(self, filename, score):
+        with open(filename, mode='a',newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([score])
+
     def train(self):
-        optimizer = keras.optimizers.Adam(learning_rate=0.00025, clipnorm=1.0)
+        # Used to facilitate the backpropagation
+        optimizer = Adam(learning_rate=0.00025, clipnorm=1.0) 
 
         # Experience replay buffers
         action_history = []
@@ -79,9 +69,9 @@ class deep_QN:
         episode_count = 0
         frame_count = 0
         # Number of frames to take random action and observe output
-        epsilon_random_frames = 50000
+        epsilon_random_frames = 5000
         # Number of frames for exploration
-        epsilon_greedy_frames = 1000000.0
+        epsilon_greedy_frames = 100000.0
         # Maximum replay length
         # Note: The Deepmind paper suggests 1000000 however this causes memory issues
         max_memory_length = 100000
@@ -114,7 +104,7 @@ class deep_QN:
                     action = keras.ops.argmax(action_probs[0]).numpy()
 
                 # Decay probability of taking random action
-                self.epsilon -= self.epsilon_interval / epsilon_greedy_frames
+                self.epsilon -= self.epsilon_interval / epsilon_greedy_frames #decrease of small value
                 self.epsilon = max(self.epsilon, self.epsilon_min)
 
                 # Apply the sampled action in our environment
@@ -147,14 +137,16 @@ class deep_QN:
 
                     # Build the updated Q-values for the sampled future states
                     # Use the target model for stability
-                    future_rewards = self.model_target.predict(state_next_sample)
+                    future_rewards = self.model_target.predict(state_next_sample,verbose=0) #to silent the output
                     # Q value = reward + discount factor * expected future reward
                     updated_q_values = rewards_sample + self.gamma * keras.ops.amax(
                         future_rewards, axis=1
                     )
 
                     # If final frame set the last value to -1
-                    updated_q_values = updated_q_values * (1 - done_sample) - done_sample
+                    # because there's no reward after the last frame
+                    # to avoid the model to go to the end of episode
+                    updated_q_values = updated_q_values * (1 - done_sample) - done_sample 
 
                     # Create a mask so we only calculate loss on the updated Q-values
                     masks = keras.ops.one_hot(action_sample, self.actions)
@@ -168,9 +160,9 @@ class deep_QN:
                         # Calculate loss between new Q-value and old Q-value
                         loss = loss_function(updated_q_values, q_action)
 
-                    # Backpropagation
-                    grads = tape.gradient(loss, self.model.trainable_variables)
-                    optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+                        # Backpropagation #TODO: check if the indentation is correct
+                        grads = tape.gradient(loss, self.model.trainable_variables)
+                        optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
                 if frame_count % update_target_network == 0:
                     # update the the target network with new weights
@@ -190,6 +182,12 @@ class deep_QN:
                 if done:
                     break
 
+            # Save the score of the episode
+            self.save_scores(self.score_file, episode_reward)
+
+            # Save the model after each episode
+            self.model_target.save(self.filename)
+
             # Update running reward to check condition for solving
             episode_reward_history.append(episode_reward)
             if len(episode_reward_history) > 100:
@@ -198,26 +196,12 @@ class deep_QN:
 
             episode_count += 1
 
-            if running_reward > 40:  # Condition to consider the task solved
-                print("Solved at episode {}!".format(episode_count))
-                break
-
+            print("Episode: ", episode_count, "Epsilon: ", self.epsilon)
             if (
                 self.max_episodes > 0 and episode_count >= self.max_episodes
             ):  # Maximum number of episodes reached
                 print("Stopped at episode {}!".format(episode_count))
                 break
-
-    def print_score(self):
-        print("results are : nada hahahahhaa lolilololilol")
-
-    def save_scores(self, filename):
-        scores = self.dqn.test(self.env, nb_episodes=5, visualize=True)
-        with open(filename, 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['Row Number', 'Score'])
-            for i, score in enumerate(scores):
-                writer.writerow([i+1, score])
 
     def __del__(self):
         self.env.close()

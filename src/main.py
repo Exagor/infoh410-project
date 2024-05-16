@@ -15,7 +15,7 @@ epsilon_interval = (
 )  # Rate at which to reduce chance of random action being taken
 batch_size = 32  # Size of batch taken from replay buffer
 max_steps_per_episode = 10000
-max_episodes = 10
+max_episodes = 2
 
 q_table_file = "q_table.bin"
 score_file = "score.csv"
@@ -88,7 +88,14 @@ def test_deep_rl():
     )
     env.metadata['render_fps'] = 120
 
-    network = deep_QN(env, gamma=DISCOUNT, epsilon=EPSILON, epsilon_min=epsilon_min, epsilon_max=epsilon_max, epsilon_interval=epsilon_interval, batch_size=batch_size, max_episodes=max_episodes)
+    network = deep_QN(env, 
+                    gamma=DISCOUNT, 
+                    epsilon=EPSILON, 
+                    epsilon_min=epsilon_min, 
+                    epsilon_max=epsilon_max, 
+                    epsilon_interval=epsilon_interval, 
+                    batch_size=batch_size, 
+                    max_episodes=max_episodes)
     network.train()
     
 

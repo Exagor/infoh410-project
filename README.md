@@ -9,7 +9,7 @@ The space invaders environment is provided by the gym library at this [link](htt
 
 To install the required libraries, run the following command:
 
-```bash
+```sh
 pip install -r requirements.txt
 ```
 
@@ -18,6 +18,7 @@ pip install -r requirements.txt
 Your objective is to destroy the space invaders by shooting your laser cannon at them before they reach the Earth. The game ends when all your lives are lost after taking enemy fire, or when they reach the earth.
 
 ### Action space
+
 SpaceInvaders has the action space of Discrete(6) with the table below listing the meaning of each action’s meanings.
 
 | Value | Meaning   |
@@ -30,6 +31,7 @@ SpaceInvaders has the action space of Discrete(6) with the table below listing t
 | 5     | LEFTFIRE  |
 
 ### Observation
+
 Atari environments have three possible observation types: "rgb", "grayscale" and "ram".
 
 obs_type="rgb" -> observation_space=Box(0, 255, (210, 160, 3), np.uint8)
@@ -39,4 +41,13 @@ obs_type="ram" -> observation_space=Box(0, 255, (128,), np.uint8)
 obs_type="grayscale" -> Box(0, 255, (210, 160), np.uint8), a grayscale version of the “rgb” type
 
 ### Reward
+
 You gain points for destroying space invaders. The invaders in the back rows are worth more points. For a more detailed documentation
+
+## Usage
+
+Run the main.py file from the root folder.
+
+```sh
+    python main.py
+```
