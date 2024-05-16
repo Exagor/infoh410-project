@@ -12,7 +12,7 @@ class deep_QN:
     def __init__(self, env, gamma=0.95,
                  epsilon=1.0, epsilon_min=0.1, epsilon_max=1.0, 
                  epsilon_interval=0.0001, batch_size=32, max_episodes=1000,
-                 filename="model.keras",
+                 filename="deep_QN.weights.h5",
                  score_file="score.csv"):
         self.env = env
         self.height, self.width = self.env.observation_space.shape[0], self.env.observation_space.shape[1]
@@ -33,9 +33,6 @@ class deep_QN:
         
 
     def build_model(self):
-        if os.path.exists(self.filename):
-            model = keras.models.load_model(self.filename)
-            return model
         model = Sequential() #initialize the model
         # Convolutional layers of the model
         model.add(Convolution2D(32, (8,8), strides=(4,4), activation='relu', input_shape=(self.height, self.width, self.channels)))
@@ -47,6 +44,10 @@ class deep_QN:
         model.add(Dense(512, activation='relu'))
         # Final layer with the actions
         model.add(Dense(6, activation='linear'))
+
+        if os.path.exists(self.filename):
+            model.load_weights(self.filename)
+
         return model
     
     def save_scores(self, filename, score):
@@ -185,8 +186,8 @@ class deep_QN:
             # Save the score of the episode
             self.save_scores(self.score_file, episode_reward)
 
-            # Save the model after each episode
-            self.model_target.save(self.filename)
+            # Save weights of the model after each episode
+            self.model_target.save_weights(self.filename)
 
             # Update running reward to check condition for solving
             episode_reward_history.append(episode_reward)
