@@ -9,13 +9,13 @@ DISCOUNT = 0.95 #gamma discount factor
 LR = 0.1 #learning rate
 EPSILON = 1.0 #epsilon greedy
 epsilon_min = 0.1  # Minimum epsilon greedy parameter
-epsilon_max = 1.0  # Maximum epsilon greedy parameter
+epsilon_max = 1  # Maximum epsilon greedy parameter
 epsilon_interval = (
     epsilon_max - epsilon_min
 )  # Rate at which to reduce chance of random action being taken
 batch_size = 32  # Size of batch taken from replay buffer
 max_steps_per_episode = 10000
-max_episodes = 2
+max_episodes = 1000
 
 q_table_file = "q_table.bin"
 score_file = "score.csv"

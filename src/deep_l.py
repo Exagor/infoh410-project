@@ -42,6 +42,7 @@ class deep_QN:
         model.add(Flatten())
         # Dense layers of the model, add fully connected layers
         model.add(Dense(512, activation='relu'))
+        model.add(Dense(256, activation='relu'))
         # Final layer with the actions
         model.add(Dense(6, activation='linear'))
 
