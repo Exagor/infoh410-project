@@ -7,7 +7,15 @@ from deep_l import *
 
 DISCOUNT = 0.95 #gamma discount factor
 LR = 0.1 #learning rate
-EPSILON = 0.2 #epsilon greedy
+EPSILON = 1.0 #epsilon greedy
+epsilon_min = 0.1  # Minimum epsilon greedy parameter
+epsilon_max = 1.0  # Maximum epsilon greedy parameter
+epsilon_interval = (
+    epsilon_max - epsilon_min
+)  # Rate at which to reduce chance of random action being taken
+batch_size = 32  # Size of batch taken from replay buffer
+max_steps_per_episode = 10000
+max_episodes = 10
 
 q_table_file = "q_table.bin"
 score_file = "score.csv"
@@ -80,9 +88,9 @@ def test_deep_rl():
     )
     env.metadata['render_fps'] = 120
 
-    network = DeepRL(env)
-    network.train(10)
-    network.print_score()
+    network = deep_QN(env, gamma=DISCOUNT, epsilon=EPSILON, epsilon_min=epsilon_min, epsilon_max=epsilon_max, epsilon_interval=epsilon_interval, batch_size=batch_size, max_episodes=max_episodes)
+    network.train()
+    
 
 if __name__ == "__main__":
 

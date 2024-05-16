@@ -1,60 +1,215 @@
 import numpy as np
+import keras
+import tensorflow as tf
+from keras import layers
 from keras.models import Sequential
 from keras.layers import Dense, Flatten, Convolution2D
 from keras.optimizers import Adam
-from rl.agents import DQNAgent
-from rl.memory import SequentialMemory
-from rl.policy import LinearAnnealedPolicy, EpsGreedyQPolicy
 import csv
-from stable_baselines3 import DQN
-from stable_baselines3.common.envs import Monitor
-from stable_baselines3.dqn.policies import CnnPolicy
-from stable_baselines3.common.callbacks import CheckpointCallback
+
+class DQN_agent:
+
+    def __init__(self, model):
+        self.model = model
 
 
-class deep_rl:
+class deep_QN:
 
-    def __init__(self, env):
+    def __init__(self, env, gamma=0.95, epsilon=1.0, epsilon_min=0.1, epsilon_max=1.0, epsilon_interval=0.0001, batch_size=32, max_episodes=1000):
         self.env = env
-        self.height, self.width, self.channels = self.env.observation_space.shape
+        self.height, self.width = self.env.observation_space.shape[0], self.env.observation_space.shape[1]
+        self.channels = 1 #because grayscale
         self.actions = self.env.action_space.n
-        self.model = self.build_model(self.height, self.width, self.channels, self.actions)
-        self.dqn = self.build_agent(self.model, self.actions)
-        self.dqn.compile(Adam(lr=1e-4))
+        self.model = self.build_model()
+        self.model_target = self.build_model()
+        self.max_steps_per_episode = 10000
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_max = epsilon_max
+        self.epsilon_interval = epsilon_interval
+        self.batch_size = batch_size
+        self.max_episodes = max_episodes
 
-    def build_model(height, width, channels, actions):
+    def build_model(self):
         model = Sequential() #initialize the model
         # Convolutional layers of the model
-        model.add(Convolution2D(32, (8,8), strides=(4,4), activation='relu', input_shape=(3,height, width, channels)))
+        model.add(Convolution2D(32, (8,8), strides=(4,4), activation='relu', input_shape=(self.height, self.width, self.channels)))
         model.add(Convolution2D(64, (4,4), strides=(2,2), activation='relu'))
         model.add(Convolution2D(64, (3,3), activation='relu'))
         # Flatten the model to convert it to a 1D array
         model.add(Flatten())
         # Dense layers of the model, add fully connected layers
         model.add(Dense(512, activation='relu'))
-        model.add(Dense(256, activation='relu'))
         # Final layer with the actions
-        model.add(Dense(actions, activation='linear'))
+        model.add(Dense(6, activation='linear'))
+    #     model = keras.Sequential(
+    #     [
+    #         layers.Lambda(
+    #             lambda tensor: keras.ops.transpose(tensor, [0, 2, 3, 1]),
+    #             output_shape=(self.width, self.height, self.channels),
+    #             input_shape=(self.channels, self.height, self.width),
+    #         ),
+    #         # Convolutions on the frames on the screen
+    #         # 32 filters, kernel size of 8, stride of 4, and "relu" activation
+    #         layers.Conv2D(32, 8, strides=4, activation="relu", input_shape=(self.channels, self.height, self.width)),
+    #         layers.Conv2D(64, 4, strides=2, activation="relu"),
+    #         layers.Conv2D(64, 3, strides=1, activation="relu"),
+    #         layers.Flatten(),
+    #         layers.Dense(512, activation="relu"),
+    #         layers.Dense(self.actions, activation="linear"),
+    #     ]
+    # )
         return model
     
-    def build_agent(model, actions):
-        #create the policy
-        policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.2, nb_steps=10000)
-        #create the memory
-        memory = SequentialMemory(limit=1000, window_length=3)
-        #create the deep Q network agent
-        dqn = DQNAgent(model=model, memory=memory, policy=policy,
-                    enable_dueling_network=True, dueling_type='avg', 
-                    nb_actions=actions, nb_steps_warmup=1000
-                    )
-        return dqn
+    def build_agent(model):
+        print("lol")
     
-    def train(self, iterations=1000):
-        self.dqn.fit(self.env, nb_steps=iterations, visualize=False, verbose=2)
+    def train(self):
+        optimizer = keras.optimizers.Adam(learning_rate=0.00025, clipnorm=1.0)
+
+        # Experience replay buffers
+        action_history = []
+        state_history = []
+        state_next_history = []
+        rewards_history = []
+        done_history = []
+        episode_reward_history = []
+        running_reward = 0
+        episode_count = 0
+        frame_count = 0
+        # Number of frames to take random action and observe output
+        epsilon_random_frames = 50000
+        # Number of frames for exploration
+        epsilon_greedy_frames = 1000000.0
+        # Maximum replay length
+        # Note: The Deepmind paper suggests 1000000 however this causes memory issues
+        max_memory_length = 100000
+        # Train the model after 4 actions
+        update_after_actions = 4
+        # How often to update the target network
+        update_target_network = 10000
+        # Using huber loss for stability
+        loss_function = keras.losses.Huber()
+
+        while True:
+            observation, _ = self.env.reset()
+            state = np.array(observation)
+            episode_reward = 0
+
+            for timestep in range(1, self.max_steps_per_episode):
+                frame_count += 1
+
+                # Use epsilon-greedy for exploration
+                if frame_count < epsilon_random_frames or self.epsilon > np.random.rand(1)[0]:
+                    # Take random action
+                    action = np.random.choice(self.actions)
+                else:
+                    # Predict action Q-values
+                    # From environment state
+                    state_tensor = keras.ops.convert_to_tensor(state)
+                    state_tensor = keras.ops.expand_dims(state_tensor, 0)
+                    action_probs = self.model(state_tensor, training=False)
+                    # Take best action
+                    action = keras.ops.argmax(action_probs[0]).numpy()
+
+                # Decay probability of taking random action
+                self.epsilon -= self.epsilon_interval / epsilon_greedy_frames
+                self.epsilon = max(self.epsilon, self.epsilon_min)
+
+                # Apply the sampled action in our environment
+                state_next, reward, done, _, _ = self.env.step(action)
+                state_next = np.array(state_next)
+
+                episode_reward += reward
+
+                # Save actions and states in replay buffer
+                action_history.append(action)
+                state_history.append(state)
+                state_next_history.append(state_next)
+                done_history.append(done)
+                rewards_history.append(reward)
+                state = state_next
+
+                # Update every fourth frame and once batch size is over 32
+                if frame_count % update_after_actions == 0 and len(done_history) > self.batch_size:
+                    # Get indices of samples for replay buffers
+                    indices = np.random.choice(range(len(done_history)), size=self.batch_size)
+
+                    # Using list comprehension to sample from replay buffer
+                    state_sample = np.array([state_history[i] for i in indices])
+                    state_next_sample = np.array([state_next_history[i] for i in indices])
+                    rewards_sample = [rewards_history[i] for i in indices]
+                    action_sample = [action_history[i] for i in indices]
+                    done_sample = keras.ops.convert_to_tensor(
+                        [float(done_history[i]) for i in indices]
+                    )
+
+                    # Build the updated Q-values for the sampled future states
+                    # Use the target model for stability
+                    future_rewards = self.model_target.predict(state_next_sample)
+                    # Q value = reward + discount factor * expected future reward
+                    updated_q_values = rewards_sample + self.gamma * keras.ops.amax(
+                        future_rewards, axis=1
+                    )
+
+                    # If final frame set the last value to -1
+                    updated_q_values = updated_q_values * (1 - done_sample) - done_sample
+
+                    # Create a mask so we only calculate loss on the updated Q-values
+                    masks = keras.ops.one_hot(action_sample, self.actions)
+
+                    with tf.GradientTape() as tape:
+                        # Train the model on the states and updated Q-values
+                        q_values = self.model(state_sample)
+
+                        # Apply the masks to the Q-values to get the Q-value for action taken
+                        q_action = keras.ops.sum(keras.ops.multiply(q_values, masks), axis=1)
+                        # Calculate loss between new Q-value and old Q-value
+                        loss = loss_function(updated_q_values, q_action)
+
+                    # Backpropagation
+                    grads = tape.gradient(loss, self.model.trainable_variables)
+                    optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+
+                if frame_count % update_target_network == 0:
+                    # update the the target network with new weights
+                    self.model_target.set_weights(self.model.get_weights())
+                    # Log details
+                    template = "running reward: {:.2f} at episode {}, frame count {}"
+                    print(template.format(running_reward, episode_count, frame_count))
+
+                # Limit the state and reward history
+                if len(rewards_history) > max_memory_length:
+                    del rewards_history[:1]
+                    del state_history[:1]
+                    del state_next_history[:1]
+                    del action_history[:1]
+                    del done_history[:1]
+
+                if done:
+                    break
+
+            # Update running reward to check condition for solving
+            episode_reward_history.append(episode_reward)
+            if len(episode_reward_history) > 100:
+                del episode_reward_history[:1]
+            running_reward = np.mean(episode_reward_history)
+
+            episode_count += 1
+
+            if running_reward > 40:  # Condition to consider the task solved
+                print("Solved at episode {}!".format(episode_count))
+                break
+
+            if (
+                self.max_episodes > 0 and episode_count >= self.max_episodes
+            ):  # Maximum number of episodes reached
+                print("Stopped at episode {}!".format(episode_count))
+                break
 
     def print_score(self):
-        self.dqn.test(self.env, nb_episodes=5, visualize=True)
-        self.dqn.save_weights('dqn_weights.h5f')
+        print("results are : nada hahahahhaa lolilololilol")
 
     def save_scores(self, filename):
         scores = self.dqn.test(self.env, nb_episodes=5, visualize=True)
@@ -62,30 +217,6 @@ class deep_rl:
             writer = csv.writer(csvfile)
             writer.writerow(['Row Number', 'Score'])
             for i, score in enumerate(scores):
-                writer.writerow([i+1, score])
-
-    def __del__(self):
-        self.env.close()
-
-class DeepRL:
-    def __init__(self, env):
-        self.env = Monitor(env)
-        self.model = DQN(CnnPolicy, self.env, verbose=1, buffer_size=10000, learning_rate=1e-4, exploration_final_eps=0.1, exploration_initial_eps=1.0, target_update_interval=1000)
-
-    def train(self, iterations=1000):
-        checkpoint_callback = CheckpointCallback(save_freq=1000, save_path='./weights/', name_prefix='dqn_weights')
-        self.model.learn(total_timesteps=iterations, callback=checkpoint_callback)
-
-    def print_score(self):
-        mean_reward, std_reward = self.model.evaluate_policy(self.model.policy, self.env, n_eval_episodes=5)
-        print(f"Mean reward: {mean_reward} +/- {std_reward}")
-
-    def save_scores(self, filename):
-        mean_reward, std_reward = self.model.evaluate_policy(self.model.policy, self.env, n_eval_episodes=5)
-        with open(filename, 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['Row Number', 'Score'])
-            for i, score in enumerate([mean_reward, std_reward]):
                 writer.writerow([i+1, score])
 
     def __del__(self):
