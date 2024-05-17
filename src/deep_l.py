@@ -71,7 +71,7 @@ class deep_QN:
         episode_count = 0
         frame_count = 0
         # Number of frames to take random action and observe output
-        epsilon_random_frames = 50000
+        epsilon_random_frames = 400
         # Number of frames for exploration
         epsilon_greedy_frames = 1000000.0
         # Maximum replay length
@@ -80,7 +80,7 @@ class deep_QN:
         # Train the model after 4 actions
         update_after_actions = 4
         # How often to update the target network
-        update_target_network = 10000
+        update_target_network = 1000
         # Using huber loss for stability
         loss_function = keras.losses.Huber()
 
