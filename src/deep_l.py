@@ -71,9 +71,9 @@ class deep_QN:
         episode_count = 0
         frame_count = 0
         # Number of frames to take random action and observe output
-        epsilon_random_frames = 5000
+        epsilon_random_frames = 50000
         # Number of frames for exploration
-        epsilon_greedy_frames = 100000.0
+        epsilon_greedy_frames = 1000000.0
         # Maximum replay length
         # Note: The Deepmind paper suggests 1000000 however this causes memory issues
         max_memory_length = 100000
@@ -88,6 +88,9 @@ class deep_QN:
             observation, _ = self.env.reset()
             state = np.array(observation)
             episode_reward = 0
+
+            # Used to differenciate the end of the episode
+            dead_flag = False
 
             for timestep in range(1, self.max_steps_per_episode):
                 frame_count += 1
@@ -182,8 +185,11 @@ class deep_QN:
                     del done_history[:1]
 
                 if done:
+                    dead_flag = True
                     break
 
+            if not dead_flag:
+                print("Episode finished after {} timesteps".format(timestep + 1))
             # Save the score of the episode
             self.save_scores(self.score_file, episode_reward)
 
