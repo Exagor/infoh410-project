@@ -7,7 +7,7 @@ from deep_l import *
 
 DISCOUNT = 0.95 #gamma discount factor
 LR = 0.1 #learning rate
-EPSILON = 1.0 #epsilon greedy
+EPSILON = 0.487 #epsilon greedy
 epsilon_min = 0.01  # Minimum epsilon greedy parameter
 epsilon_max = 1  # Maximum epsilon greedy parameter
 epsilon_interval = (
