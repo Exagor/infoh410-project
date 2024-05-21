@@ -4,6 +4,7 @@ import tensorflow as tf
 from keras.models import Sequential
 from keras.layers import Dense, Flatten, Convolution2D
 from keras.optimizers import Adam
+from keras.utils import plot_model
 import csv
 import os
 
@@ -31,6 +32,8 @@ class deep_QN:
         self.batch_size = batch_size
         self.max_episodes = max_episodes
         
+    def print_model(self,model):
+        plot_model(model, to_file='figures/NN_model.png', show_shapes=True, show_layer_names=True)
 
     def build_model(self):
         model = Sequential() #initialize the model
