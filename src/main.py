@@ -98,6 +98,33 @@ def test_deep_rl():
                     max_episodes=max_episodes)
     network.train()
     
+def play_game():
+    args = {
+        "obs_type": "grayscale",
+        "frameskip": 4
+    }
+
+    global has_display
+
+    if not has_display:
+        args["render_mode"] ="human"
+        has_display = True
+
+    env = gym.make(
+        "ALE/SpaceInvaders-v5",
+        **args
+    )
+    env.metadata['render_fps'] = 120
+
+    network = deep_QN(env, 
+                    gamma=DISCOUNT, 
+                    epsilon=EPSILON, 
+                    epsilon_min=epsilon_min, 
+                    epsilon_max=epsilon_max, 
+                    epsilon_interval=epsilon_interval, 
+                    batch_size=batch_size, 
+                    max_episodes=max_episodes)
+    network.play_game()
 
 if __name__ == "__main__":
 
@@ -106,4 +133,7 @@ if __name__ == "__main__":
     #     train()
 
     #test of deep reinforcement
-    test_deep_rl()
+    # test_deep_rl()
+
+    #play the game
+    play_game()

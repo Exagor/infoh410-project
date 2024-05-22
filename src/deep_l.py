@@ -168,7 +168,7 @@ class deep_QN:
                         # Calculate loss between new Q-value and old Q-value
                         loss = loss_function(updated_q_values, q_action)
 
-                        # Backpropagation #TODO: check if the indentation is correct
+                        # Backpropagation
                         grads = tape.gradient(loss, self.model.trainable_variables)
                         optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
@@ -204,6 +204,78 @@ class deep_QN:
             if len(episode_reward_history) > 100:
                 del episode_reward_history[:1]
             running_reward = np.mean(episode_reward_history)
+
+            episode_count += 1
+
+            print("Episode: ", episode_count, "Epsilon: ", self.epsilon)
+            if (
+                self.max_episodes > 0 and episode_count >= self.max_episodes
+            ):  # Maximum number of episodes reached
+                print("Stopped at episode {}!".format(episode_count))
+                break
+
+    def play_game(self):
+        running_reward = 0
+        episode_count = 0
+        frame_count = 0
+        # Number of frames to take random action and observe output
+        epsilon_random_frames = 400
+        # Number of frames for exploration
+        epsilon_greedy_frames = 1000000.0
+        # How often to update the target network
+        update_target_network = 1000
+
+        while True:
+            observation, _ = self.env.reset()
+            state = np.array(observation)
+            episode_reward = 0
+
+            # Used to differenciate the end of the episode
+            dead_flag = False
+
+            for timestep in range(1, self.max_steps_per_episode):
+                frame_count += 1
+
+                # Use epsilon-greedy for exploration
+                if frame_count < epsilon_random_frames or self.epsilon > np.random.rand(1)[0]:
+                    # Take random action
+                    action = np.random.choice(self.actions)
+                else:
+                    # Predict action Q-values
+                    # From environment state
+                    state_tensor = keras.ops.convert_to_tensor(state)
+                    state_tensor = keras.ops.expand_dims(state_tensor, 0)
+                    action_probs = self.model(state_tensor, training=False)
+                    # Take best action
+                    action = keras.ops.argmax(action_probs[0]).numpy()
+
+                # Decay probability of taking random action
+                self.epsilon -= self.epsilon_interval / epsilon_greedy_frames #decrease of small value
+                self.epsilon = max(self.epsilon, self.epsilon_min)
+
+                # Apply the sampled action in our environment
+                state_next, reward, done, _, _ = self.env.step(action)
+                state_next = np.array(state_next)
+
+                episode_reward += reward
+
+                state = state_next
+
+                if frame_count % update_target_network == 0:
+                    # update the the target network with new weights
+                    self.model_target.set_weights(self.model.get_weights())
+                    # Log details
+                    template = "running reward: {:.2f} at episode {}, frame count {}"
+                    print(template.format(running_reward, episode_count, frame_count))
+
+                if done:
+                    dead_flag = True
+                    break
+
+            if not dead_flag:
+                print("Episode finished after {} timesteps".format(timestep + 1))
+            # Save the score of the episode
+            self.save_scores(self.score_file, episode_reward)
 
             episode_count += 1
 
