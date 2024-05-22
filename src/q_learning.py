@@ -7,6 +7,7 @@ q_table_file = "q_table.bin"
 score_file = "score.csv"
 
 class agent:
+
     Q_table=dict()
 
     @staticmethod
@@ -82,7 +83,8 @@ class agent:
                 agent.Q_table[str_state][action] = 0.0
             if action not in agent.Q_table[str_next_state]:
                 agent.Q_table[str_next_state][action] = 0.0
-        
+
+            # Update the Q table
             agent.Q_table[str_state][action] += self.alpha * (reward + self.gamma * max(agent.Q_table[str_next_state].values()) - agent.Q_table[str_state][action])
 
     def train(self, episodes=1000):
@@ -111,7 +113,7 @@ class agent:
 
             # Save the episode & the updated Q table
             fu.save_score(score_file, self.score, end-start)
-            fu.save_csv(q_table_file, self.Q_table)
+            fu.save_q_table(q_table_file, self.Q_table)
     
     def play_a_game(self, train=False):
         """

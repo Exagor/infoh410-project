@@ -1,9 +1,9 @@
 import gymnasium as gym
-from agent import agent
+from q_learning import agent
 from time import time
 import file_utils as fu
 from threading import Thread, current_thread
-from deep_l import *
+from deep_l import deep_QN
 
 DISCOUNT = 0.95 #gamma discount factor
 LR = 0.1 #learning rate
@@ -19,76 +19,44 @@ max_episodes = 1000
 
 q_table_file = "q_table.bin"
 score_file = "score.csv"
-table=fu.load_csv(q_table_file)
-has_display = False
+table=fu.load_q_table(q_table_file)
 
-def train():
-
-    print("Making env - ", current_thread().name)
+def init_env():
+    """
+    Initializes a new fresh game environment
+    
+    Returns: the environment
+    """
 
     args = {
         "obs_type": "grayscale",
-        "frameskip": 4
+        "frameskip": 4,
+        "render_mode": "human", # to show the game
     }
-
-    global has_display
-
-    if not has_display:
-        args["render_mode"] ="human"
-        has_display = True
-
 
     env = gym.make(
         "ALE/SpaceInvaders-v5",
         **args
     )
-
     env.metadata['render_fps'] = 120
+
+    return env
+
+def train_q_learning(episodes=max_episodes):
+    """Classic Q-learning training loop"""
+
+    env = init_env()
 
     print("Init agent - ", current_thread().name)
 
     bot = agent(EPSILON, env, DISCOUNT, LR)
 
-    print("Reseting env - ", current_thread().name)
     print("Starting training - ", current_thread().name)
-    bot.train(100)
+    bot.train(episodes)
 
-def multi_train(threads=5):
-
-    pool = []
-
-    for _ in range(threads):
-        t = Thread(target=train)
-        pool.append(t)
-        t.start()
-        print("Thread started")
-    
-    for t in pool:
-        t.join()
-    
-    print("All threads finished")
-
-def test_deep_rl():
-    print("Making env - ", current_thread().name)
-
-    args = {
-        "obs_type": "grayscale",
-        "frameskip": 4
-    }
-
-    global has_display
-
-    if not has_display:
-        args["render_mode"] ="human"
-        has_display = True
-
-    env = gym.make(
-        "ALE/SpaceInvaders-v5",
-        **args
-    )
-    env.metadata['render_fps'] = 120
-
-    network = deep_QN(env, 
+def train_dqn():
+    """Train the agent using deep Q-learning"""
+    network = deep_QN(env=init_env(), 
                     gamma=DISCOUNT, 
                     epsilon=EPSILON, 
                     epsilon_min=epsilon_min, 
@@ -96,27 +64,11 @@ def test_deep_rl():
                     epsilon_interval=epsilon_interval, 
                     batch_size=batch_size, 
                     max_episodes=max_episodes)
-    network.train()
+    network.play_game(train=True)
     
-def play_game():
-    args = {
-        "obs_type": "grayscale",
-        "frameskip": 4
-    }
-
-    global has_display
-
-    if not has_display:
-        args["render_mode"] ="human"
-        has_display = True
-
-    env = gym.make(
-        "ALE/SpaceInvaders-v5",
-        **args
-    )
-    env.metadata['render_fps'] = 120
-
-    network = deep_QN(env, 
+def play_dqn_game():
+    """Play the game using deep Q-learning"""
+    network = deep_QN(env=init_env(), 
                     gamma=DISCOUNT, 
                     epsilon=EPSILON, 
                     epsilon_min=epsilon_min, 
@@ -124,16 +76,15 @@ def play_game():
                     epsilon_interval=epsilon_interval, 
                     batch_size=batch_size, 
                     max_episodes=max_episodes)
-    network.play_game()
+    network.play_game(train=False)
 
 if __name__ == "__main__":
 
-    # agent.with_Q_table(table)
-    # while True:
-    #     train()
+    #classic q-learning training
+    # train_q_learning()
 
-    #test of deep reinforcement
-    # test_deep_rl()
+    #deep q-learning training
+    # train_dqn()
 
     #play the game
-    play_game()
+    play_dqn_game()

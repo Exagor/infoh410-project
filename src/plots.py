@@ -3,11 +3,12 @@ import matplotlib.pyplot as plt
 
 #use of pandas to have a dataframe
 df = pd.read_csv('score.csv')
-
-
+#select the first column
 column = df.iloc[:, 0]
 
+
 def to_mean_vals(values, n = 50):
+    """Calculate the mean of the last n values"""
     for i,_ in enumerate(values):
         if i+n > len(values):
             break
@@ -15,6 +16,7 @@ def to_mean_vals(values, n = 50):
         yield float(sum(values[i:i+n]))/n
 
 def plot_graph(indx, vals, xlabel, ylabel, title, filename):
+    """Plot a graph of the given values"""
     plt.plot(indx, vals)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
@@ -24,9 +26,8 @@ def plot_graph(indx, vals, xlabel, ylabel, title, filename):
     plt.savefig(filename)
     plt.show()
 
-rel_mean_50 = list(to_mean_vals(column.values))
 
-# Plot the graph
+# Raw score graph
 plot_graph(
     column.index, 
     column.values,
@@ -36,6 +37,8 @@ plot_graph(
     'figures/score.png'
 )
 
+# Relative mean (n=50) graph
+rel_mean_50 = list(to_mean_vals(column.values))
 
 plot_graph(
     column.index[:-49],
